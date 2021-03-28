@@ -1,0 +1,373 @@
+---
+title: "3_10_2021_DSA5200_Final Project"
+author: "Owen R. Evans"
+date: "3/8/2021"
+output: pdf_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+knitr::opts_chunk$set(message = FALSE)
+
+# Final Project - EDA and Static Plots
+# College Majors
+
+# Set Working Directory
+#setwd("~/Desktop/R Scripts/Data Viz - DSA5200 - Work/Final Project")
+
+# load libraries
+library(tidyverse)
+library(ggforce)
+library(ggalt)
+library(scales)
+library(extrafont)
+library(ggrepel)
+library(stringr)
+library(knitr)
+library(formatR)
+library(ggpubr)
+library(ggsci)
+
+knitr::opts_chunk$set(tidy.opts=list(width.cutoff=50), tidy=TRUE)
+
+```
+
+# Data Description
+
+``` {r Load Data}
+
+# Load College Major Data
+women.stem <- read.csv(paste0("https://raw.githubusercontent.com/fivethirtyeight","/data/master/college-majors/women-stem.csv"))  # women in STEM degrees
+
+recent.grads <- read.csv(paste0("https://raw.githubusercontent.com/fivethirtyeight","/data/master/college-majors/recent-grads.csv")) # All data for recent graduates
+
+grad.students <- read.csv(paste0("https://raw.githubusercontent.com/fivethirtyeight","/data/master/college-majors/grad-students.csv")) # graduate students
+
+```
+
+# STEM - Female Participation
+
+``` {r Stem - Female Participation, fig.height = 4.0, fig.width = 6, fig.align = "center"}
+# Data preparation
+ranked <- women.stem %>% group_by(Major_category) %>% 
+  summarize(ShareWomen=mean(ShareWomen)) %>% arrange(ShareWomen)
+
+women.stem$Major_category <- 
+  factor(women.stem$Major_category, levels = ranked$Major_category)
+
+# Plot generation
+ggplot(women.stem, 
+       aes(x=ShareWomen, y=Median, color=Major_category))+
+  geom_encircle(expand=0.03, size=5, 
+                aes(fill=Major_category), alpha=0.3)+
+  scale_color_brewer(palette="Set1")+
+  scale_fill_brewer(palette="Set1")+
+  geom_point(size=0.8)+
+  theme_minimal()+
+  scale_x_continuous(labels = label_percent(), limits = c(0,1))+
+  scale_y_continuous(labels = dollar_format(),limits = c(20000,120000))+ 
+  theme(axis.title = element_text(size = 9, face = "bold"), 
+    plot.title = element_text(size = 12, face = "bold", hjust=0.5),
+    plot.subtitle = element_text(size=8, hjust=0.5, face="italic"),
+    plot.caption = element_text(size=5, color="gray53"),
+    axis.text = element_text(size=8),
+    axis.ticks = element_line(colour = "black", size=0.2),
+    axis.ticks.length=unit(.15, "cm"),
+    panel.grid.major = element_line(size = 0.3), 
+    panel.grid.minor = element_line(size = 0.3), 
+    legend.position = c(0.8, 0.78),
+    legend.title = element_blank(),
+    legend.text = element_text(size=7),
+    panel.border = element_rect(color="black", fill=NA, size=0.5),
+    plot.margin = unit(c(0, 1.5, 0, 1.5), "cm"),
+    legend.key.size = unit(0.02, 'lines'))+
+  labs(title=
+         "\nMedian Salary of STEM Majors vs. Gender (2010-2012)", 
+       subtitle = "How Does One Choice of Major Impact Earnings?\n",
+    x = "\n% Female Participation per Major Category", 
+    y = "Median Starting Salary\n", 
+    caption = paste0("\nData Source :", "https://github.com/fivethirtyeight/data/blob","/master/college-majors/women-stem.csv",
+                     "\nNote: STEM-Science, Technology, Engineering & Math"))
+
+```
+
+# Female participation for STEM vs. Non-STEM College Majors
+
+``` {r STEM vs Non-STEM, fig.height = 4.0, fig.width = 5, fig.align = "center"}
+
+recent.grads1 <- recent.grads %>%
+  mutate(Cat2 = ifelse(Major_category %in% women.stem$Major_category, "STEM Major", "Non-STEM Major"))
+
+# Percent Female vs Median Salary for All Majors
+ggplot(recent.grads1, 
+       aes(x=ShareWomen, y=Median, color=Cat2))+
+  geom_point(size=0.7, alpha=0.8)+
+  geom_smooth(aes(fill=Cat2, color=Cat2), size=0.7)+
+  theme_minimal()+
+  scale_x_continuous(labels = label_percent(), limits = c(0,1))+
+  scale_y_continuous(labels = dollar_format(), limits = c(20000,80000))+
+  scale_fill_d3()+
+  scale_color_d3()+
+  theme(axis.title = element_text(size = 9, face = "bold"), 
+        plot.title = element_text(size = 12, face = "bold", hjust=0.5),
+        plot.subtitle = element_text(size=8, hjust=0.5),
+        plot.caption = element_text(size=5, color="grey33"),
+        axis.text = element_text(size=8),
+        axis.ticks = element_line(color = "black", size=0.2),
+        axis.ticks.length=unit(.15, "cm"),
+        panel.grid.major = element_line(size = 0.4), 
+        panel.grid.minor = element_line(size = 0.4), 
+        legend.position = c(0.8, 0.9),
+        legend.title = element_blank(),
+        legend.text = element_text(size=9),
+        plot.margin = unit(c(0, 0, 0, 0), "cm"),
+        panel.border = element_rect(color="black", 
+                                    fill=NA, size=0.5),
+        legend.key.size = unit(0.7, 'lines')) +
+  labs(title="Median Starting Salary vs. Gender",
+       subtitle = "Does the Gender Disparity Extend Beyond STEM Majors?\n",
+       x = "\n% Female Participation", 
+       y = "Median Starting Salary\n", 
+       caption = paste0("\nData Source :", "https://github.com/fivethirtyeight/","data/blob/master/college-majors/recent-grads.csv
+       Note: STEM-Science, Technology, Engineering & Math"))
+
+```
+
+# Choosing a Major Based Upon Popularity?
+``` {r Popularity, fig.height = 4.5, fig.width = 6, fig.align = "center"}
+
+# Data preparation, remove NA's
+# Added popularity index by Gender for each major
+recent.grads <- na.omit(recent.grads) # remove NA's
+recent.grads$Total <- as.numeric(recent.grads$Total)
+popular.data <- recent.grads %>% mutate(popIndexFemale = recent.grads$Women/sum(recent.grads$Women)*100, popIndexMale=recent.grads$Men/sum(recent.grads$Men)*100) 
+
+
+# Grouped by Major Category, Popularity % Split by Gender
+# Aggregated data
+popdata <- recent.grads %>% group_by(Major_category) %>%
+  summarize(medsal=mean(Median), Total2=sum(Total), Men2=sum(Men), Women2=sum(Women)) %>% mutate(popIndexMale=Men2/sum(Men2)*100, popIndexFemale=Women2/sum(Women2)*100, Cat2 = ifelse(Major_category %in% women.stem$Major_category,"STEM", "Non-STEM")) %>% arrange(medsal)
+
+# Reorder/re-factor major categor by decreasing median salary
+popdata$Major_category <- 
+  factor(popdata$Major_category, levels = popdata$Major_category)
+
+# Subplots - bar chart of median salary, ranked.
+Mainbar <- ggplot(popdata, aes(x=Major_category, y=medsal))+
+  geom_bar(stat = 'identity', aes(fill=Cat2), 
+           color='black', width=0.75, alpha=0.8) +
+  scale_y_continuous(labels = dollar_format(), 
+                     limits = c(0,60000), expand=c(0,0))+
+  scale_fill_d3()+
+  coord_flip()+
+  theme_minimal()+
+  theme(axis.title.y = element_blank(),
+        plot.caption = element_text(size=5, color="grey33", hjust=1),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(size=8, color='black'),
+        axis.title.x = element_text(size=8, face="bold"),
+        legend.title = element_blank(),
+        axis.ticks.x = element_line(color = "black", size=0.2),
+        axis.ticks.y = element_line(color = "grey80", size=0.4),
+        axis.ticks.length=unit(.15, "cm"),
+        legend.text = element_text(size=9, color='black'),
+        legend.key.size = unit(0.75, 'lines'),
+        axis.line = element_line(linetype = "solid", size=0.2),
+        panel.grid.major.x = element_line(size = 0.4, 
+                                          color="gray80",
+                                          linetype='dashed'),
+        panel.grid.minor.x = element_line(size = 0.4, 
+                                          color="gray80",
+                                          linetype = 'dashed'),
+        panel.grid.major.y = element_blank(),
+        plot.margin = unit(c(1.11, 1.0, 0, 0), "cm"),
+        legend.position = c(0.81, 0.14))+
+  labs(y="\nMedian Starting Salary\n",
+       caption = paste0("\nData Source :", "https://github.com/fivethirtyeight/","data/blob/master/college-majors/recent-grads.csvNote: STEM-Science, Technology, Engineering & Math"))
+
+# Pivot longer in order to derive datatable
+popdata2 <- popdata %>% pivot_longer(cols=starts_with("popIndex"),
+                                     names_to='Sex', 
+                                     values_to='PopularIndex')
+# Rename variables
+popdata2$Sex <- ifelse(popdata2$Sex=="popIndexMale", "Males", "Females")
+
+# GGplot - "datatable"
+datatable <- ggplot(popdata2, 
+                    aes(x=Major_category, y=factor(Sex),
+                        label = format(value,1), nsmall = 1))+
+  geom_label(label=round(popdata2$PopularIndex,digits=1), size=2.8, 
+            color='black', label.size=NA)+
+  scale_y_discrete(position="right")+
+  theme_minimal()+
+  theme(axis.title.y = element_blank(),
+        axis.text.y = element_text(size=8, color='black'),
+        axis.text.x = element_text(size=8, color='black', hjust=0.5),
+        plot.margin = unit(c(0.005, 0, 2.009, 0.05), "cm"),
+        axis.title = element_text(size=8, color='black', face="bold", hjust=0.5),
+        panel.background = element_rect(fill="white", color="white"),
+        panel.grid.major.x = element_blank(),
+        panel.grid.major.y = element_line(color="grey80", size=0.4))+
+  labs(y="\nPopularity of Major (%)")+
+  coord_flip()
+
+combotitle <- "    College Major Popularity and Starting Salary"
+combosubtitle <- "      Are Popular Majors the Most Lucrative?"
+
+tgrobtitle <- text_grob(combotitle,size = 12, face="bold", hjust=0.015)
+tgrobsubtitle <- text_grob(combosubtitle,size = 10, hjust=-0.1, face="italic")
+
+title <- as_ggplot(tgrobtitle) + theme(plot.margin = margin(0,1.8,0,0, "cm"))
+subtitle <- as_ggplot(tgrobsubtitle) + theme(plot.margin = margin(0,0,0,0, "cm"))
+  
+ggarrange(title,NULL, subtitle, NULL, datatable, Mainbar, 
+          labels = NULL, widths = c(2.4,2.8), heights = c(0.25,0.25,3.8), ncol = 2, nrow = 3)
+
+```
+
+
+# Top10 and Bottom10 - potential earning opportunities
+
+``` {r Top10_Bottom10, fig.height = 5.5, fig.width = 7, fig.align = "center"}
+
+# Top 10 and Bottom 10 majors, earning power
+
+sliced_data <- recent.grads %>%
+  filter(Rank<10 | Rank %in% 
+           c((nrow(recent.grads)-10):(nrow(recent.grads)))) %>%
+  mutate(Group = ifelse(Rank<10, "Top10", "Bottom10")) %>% 
+  select(Rank, Group, Major, Major_category, Median, P25th, P75th)
+
+sliced_data$Major <- str_to_title(sliced_data$Major)
+sliced_data$Group <- factor(sliced_data$Group, c("Top10", "Bottom10"))
+
+ggplot(sliced_data, aes(x=reorder(Major, Median),
+                        y=Median, ymin = P25th, ymax= P75th))+
+  geom_crossbar(aes(color=Group, fill=Group), size=0.5, width=0.8, alpha=0.9)+
+  geom_crossbar(color="black", size=0.3, width=0.8)+
+  geom_point(color="black", size=1.7, shape=21, fill="white")+
+  labs(x=NULL)+
+  coord_flip()+
+  scale_y_continuous(labels = dollar_format(), 
+                     limits = c(0,150000))+
+  scale_fill_d3()+
+  scale_color_d3()+
+  theme_minimal()+
+  theme(axis.title = element_text(size = 11, face = "bold"), 
+        plot.title = element_text(size = 13, face = "bold", hjust=1.0),
+        plot.subtitle = element_text(size=11, hjust=1, face="italic"),
+        plot.caption = element_text(size=8, color="grey65",hjust=0.9),
+        axis.text.y = element_text(size=10),
+        axis.text.x = element_text(size=10),
+        axis.line = element_blank(),
+        panel.border = element_rect(color="black", fill=NA, size=0.35),
+        axis.ticks = element_line(colour = "black", size=0.4),
+        axis.ticks.length=unit(.25, "cm"),
+        panel.grid.major = element_line(size = 0.4, color="gray85"), 
+        panel.grid.minor = element_line(size = 0.4, color="gray85"), 
+        legend.position = c(0.80,0.08),
+        legend.title = element_blank(),
+        legend.text = element_text(size=12, vjust=0.7),
+        legend.background = element_blank(),
+        panel.background = element_rect(fill = "white"),
+        plot.margin = unit(c(0, 0.8, 0, 0), "cm"))+
+  labs(subtitle = "What are the Most and Least Lucrative College Majors?                                  \n",
+        y = "\nStarting Salary",
+       caption = "\nData Source : https://github.com/fivethirtyeight/data/blob/master/college-majors/recent-grads.csv",
+       title = "Median and Interquartile Ranges of Starting Salaries for Recent Graduates")
+
+
+```
+
+# Underemployment
+
+``` {r, Unemployment, fig.height = 5, fig.align = "center"}
+
+data.un.1 <- recent.grads %>%
+  mutate(Underemploy_Rate = 
+           (Low_wage_jobs+Non_college_jobs)/(Low_wage_jobs+Non_college_jobs+College_jobs)) %>%
+  mutate(Cat2 = ifelse(Major_category %in% women.stem$Major_category, "STEM", "Non-STEM")) %>% 
+  pivot_longer(cols=c("Underemploy_Rate", "Unemployment_rate"), names_to='Type',
+               values_to='Rate') %>%
+  select(Rank, Median, Women, Major, Major_category, Type, Rate, ShareWomen) %>%
+  mutate(Cat2 = ifelse(Major_category %in% women.stem$Major_category, "STEM", "Non-STEM"),
+         ModSal=3*Median) %>% arrange(desc(Rank))
+
+# rerank major category
+data.un.1$Major_category <- 
+  factor(data.un.1$Major_category, levels = popdata$Major_category)
+
+#Remove NA's
+data.un.1 <- na.omit(data.un.1)
+
+# ggbeeswarm library
+library(ggbeeswarm)
+library(ggsci)
+
+# Summary Stats
+
+sum1 <- data.un.1 %>% filter(Type=="Unemployment_rate" & Cat2=="STEM")
+sum2 <- data.un.1 %>% filter(Type=="Unemployment_rate" & Cat2=="Non-STEM")
+sum3 <- data.un.1 %>% filter(Type=="Underemploy_Rate" & Cat2=="STEM")
+sum4 <- data.un.1 %>% filter(Type=="Underemploy_Rate" & Cat2=="Non-STEM")
+
+sum1 <- mean(sum1$Rate)
+sum2 <- mean(sum2$Rate)
+sum3 <- mean(sum3$Rate)
+sum4 <- mean(sum4$Rate)
+
+scipen=999
+
+# Unemployment Plot
+ggplot(data.un.1) + 
+  geom_beeswarm(aes(x=Rate, y=Cat2, col = Type, size=Women),
+                cex = 1.7, alpha=0.4, groupOnX = FALSE)+
+  scale_size_continuous(range=c(1,7), labels=c("0","10,000", "20,000", "30,000"))+
+  scale_color_d3(labels=c("Under-Employment Rate", "Unemployment Rate"))+
+  scale_fill_d3()+
+  theme_minimal()+
+  scale_x_continuous(label=percent_format(), limits=c(0,1), breaks=seq(0,1,0.25))+
+  coord_flip() + 
+  geom_segment(x=sum2, xend=sum2, y=0.65, yend=1.35, color="#FF7F0EFF", size=0.5)+
+  geom_segment(x=sum4, xend=sum4, y=0.85, yend=1.15, color="#1F77B4FF", size=0.5)+
+  geom_segment(x=sum1, xend=sum1, y=1.7, yend=2.3, color="#FF7F0EFF", size=0.5)+
+  geom_segment(x=sum3, xend=sum3, y=1.9, yend=2.1, color="#1F77B4FF", size=0.5)+
+  annotate("text", x=sum2+0.07, y=0.6, size=3, color="#FF7F0EFF",
+           label=paste0(round(sum2*100,digits=1),"%"))+
+  annotate("text", x=sum4, y=0.7, size=3, color="#1F77B4FF",
+           label=paste0(round(sum4*100,digits=1),"%"))+
+  annotate("text", x=sum1+0.06, y=1.65, size=3, color="#FF7F0EFF",
+           label=paste0(round(sum1*100,digits=1),"%"))+
+  annotate("text", x=sum3, y=1.75, size=3, color="#1F77B4FF",
+           label=paste0(round(sum3*100,digits=1),"%"))+
+  theme(panel.grid.major = element_line(color = "gray95"), 
+    panel.grid.minor = element_line(color = "gray95"), 
+    panel.background = element_rect(fill = NA),
+    plot.title = element_text(size=12, face="bold", color="black", hjust=0.5),
+    legend.title = element_text(size=8, color="black", face="bold"),
+    axis.text = element_text(size=8, color="black", hjust=0.5),
+    axis.ticks = element_line(size=0.4),
+    axis.ticks.length = unit(0.2, 'cm'),
+    panel.border = element_rect(fill=NA, size=0.25, color="black"),
+    legend.text = element_text(size=7, color="black"),
+    axis.title=element_text(size=10, face="bold", color="black"),
+    plot.subtitle = element_text(size=8, color="grey35", hjust=0.5, face="italic"),
+    plot.caption = element_text(size=5, color="grey60", hjust=0),
+    legend.box.just = "left",
+    legend.direction = "vertical",
+    legend.title.align = 0,
+    legend.key.size = unit(1.2, 'lines'))+
+  labs(title = "Rates of Unemployment and Under-Employment for \nRecent Graduates by College Major",  subtitle = "Does Gender and/or College Major Affect Job Security?",
+    x = "Rate (%)\n", y = "\nCollege Major Category\n", color="Rate Type", size="Total Number of Women\n per College Major",
+    caption = "Data Source : https://github.com/fivethirtyeight/data/blob/master/college-majors/recent-grads.csv
+Note1: Underemployment is defined as the percentage of respondents currently employed in jobs not requiring a college major or jobs with low wages.
+Note2: STEM Majors include those in Science, Technology, Engineering & Math")
+
+```
+
+
+
+
+
